@@ -3,8 +3,9 @@ class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
     A specialized agent for ReAct workflows, combining tool management with reasoning and acting logic.
     """
 
-    def __init__(self, name, agent, tools=None, tool_registry=None, memory=None, **kwargs):
+    def __init__(self, name, agent, tools=None, tool_registry=None, capability_registry=None, memory=None, **kwargs):
         super().__init__(name, agent, tools=tools, tool_registry=tool_registry, memory=memory, **kwargs)
+        self.capability_registry = capability_registry or CapabilityRegistry()
 
     def run_react(self, query: str) -> str:
         """
