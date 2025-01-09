@@ -51,3 +51,12 @@ class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
             self.add_tool(tool)
             return f"Tool '{tool_name}' added successfully."
         return f"Tool '{tool_name}' not found in the registry."
+
+    def use_capability(self, capability_name, query, **kwargs):
+        """
+        Use a registered capability.
+        """
+        capability = self.capability_registry.get_capability(capability_name)
+        if capability:
+            return capability.run(query, **kwargs)
+        return f"Capability '{capability_name}' not found."
