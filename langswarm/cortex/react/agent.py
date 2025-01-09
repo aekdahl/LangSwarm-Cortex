@@ -41,3 +41,13 @@ class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
         tool_name = action_str.split("(")[0]
         args = eval(action_str.split("(")[1][:-1])  # Simplistic argument parsing
         return tool_name, args
+
+    def request_tool_from_registry(self, tool_name, registry: ToolRegistry):
+        """
+        Dynamically request a tool from the registry.
+        """
+        tool = registry.get_tool(tool_name)
+        if tool:
+            self.add_tool(tool)
+            return f"Tool '{tool_name}' added successfully."
+        return f"Tool '{tool_name}' not found in the registry."
