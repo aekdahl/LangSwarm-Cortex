@@ -1,54 +1,63 @@
 class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
     """
-    A specialized agent for ReAct workflows, combining tool management with reasoning and acting logic.
+    A specialized agent for workflows combining reasoning and acting (ReAct). This agent supports tools and capabilities
+    for enhanced functionality and flexibility. It parses input for actionable instructions (e.g., tools or capabilities),
+    routes actions to the appropriate handlers, and returns structured responses.
     """
 
     def __init__(self, name, agent, tools=None, tool_registry=None, capability_registry=None, memory=None, **kwargs):
         super().__init__(name, agent, tools=tools, tool_registry=tool_registry, memory=memory, **kwargs)
         self.capability_registry = capability_registry or CapabilityRegistry()
 
-    def chat(self, query: str) -> str:
+    def chat(self, query: str) -> tuple:
         """
         Handle both standard and ReAct-specific queries.
+        :param query: str - The input query.
+        :return: Tuple[int, str] - (status_code, response).
         """
-        if query.startswith("REACT:"):
-            # Route to ReAct workflow
-            return self.react(query[len("REACT:"):].strip())
+        if query.lower().startswith(("use tool", "use capability")):
+            return self.react(query)
         else:
             # Default behavior from AgentWrapper
-            return super().chat(query)
+            return 200, super().chat(query)
 
-    def react(self, query: str) -> str:
+    def react(self, query: str) -> tuple:
         """
-        Execute the ReAct loop: reason, act, and iterate until a final response is produced.
+        Execute the reasoning and acting workflow: parse the input for tools or capabilities, route the action,
+        and return a structured response.
+        :param query: str - The input query.
+        :return: Tuple[int, str] - (status_code, response).
         """
-        while True:
-            # Reasoning phase
-            reasoning = self.reason(query)
-            self.memory.append({"role": "assistant", "content": reasoning})
-            self._log_event(f"Reasoning: {reasoning}", "info")
+        # Reasoning phase
+        reasoning = self.reason(query)
+        self.memory.append({"role": "assistant", "content": reasoning})
+        self._log_event(f"Reasoning: {reasoning}", "info")
 
-            # Parse action
-            action_details = self._parse_action(reasoning)
-            if action_details:
-                # Route action
-                status, result = self._route_action(*action_details)
-                if status == 201:  # Successful execution
-                    self.memory.append({"role": "system", "content": f"Action Result: {result}"})
-                    self._log_event(f"Action Result: {result}", "info")
-                elif status == 404:  # Action not found
-                    self._log_event(f"Action Error: {result}", "error")
-                    return result
-            else:
-                # If no action detected, return the reasoning as the final response
-                return reasoning
+        # Parse action
+        action_details = self._parse_action(reasoning)
+        if action_details:
+            # Route action
+            status, result = self._route_action(*action_details)
+            if status == 201:  # Successful action execution
+                self.memory.append({"role": "system", "content": f"Action Result: {result}"})
+                self._log_event(f"Action Result: {result}", "info")
+                return status, result
+            elif status == 404:  # Action not found
+                self._log_event(f"Action Error: {result}", "error")
+                return status, result
+        else:
+            # No action detected, return the reasoning as the final response
+            self._log_event("No actionable reasoning found. Returning final response.", "info")
+            return 200, reasoning
 
     def _parse_action(self, reasoning: str) -> tuple:
         """
-        Parse the action from reasoning into a tool name and arguments.
+        Parse the reasoning output to detect tool or capability actions.
+        :param reasoning: str - The reasoning output containing potential actions.
+        :return: Tuple[str, str, dict] or None - (action_type, action_name, params) if action detected, else None.
         """
-        tool_match = re.match(r"ACTION:\s*tool:(\w+)\s*({.*})", reasoning)
-        capability_match = re.match(r"ACTION:\s*capability:(\w+)\s*({.*})", reasoning)
+        tool_match = re.match(r"use tool:\s*(\w+)\s*({.*})", reasoning, re.IGNORECASE)
+        capability_match = re.match(r"use capability:\s*(\w+)\s*({.*})", reasoning, re.IGNORECASE)
 
         try:
             if tool_match:
@@ -65,6 +74,10 @@ class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
     def _route_action(self, action_type, action_name, params):
         """
         Route actions to the appropriate handler with timeout handling.
+        :param action_type: str - Type of action (tool or capability).
+        :param action_name: str - Name of the action.
+        :param params: dict - Parameters for the action.
+        :return: Tuple[int, str] - (status_code, result).
         """
         handler = None
 
@@ -82,6 +95,10 @@ class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
     def _execute_with_timeout(self, handler, params, timeout=10):
         """
         Execute a handler with a timeout.
+        :param handler: callable - The action handler.
+        :param params: dict - Parameters for the handler.
+        :param timeout: int - Timeout in seconds.
+        :return: str - The result of the handler.
         """
         def timeout_handler(signum, frame):
             raise TimeoutError("Action execution timed out.")
@@ -107,5 +124,8 @@ class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
     def _log_event(self, message, level, **metadata):
         """
         Log an event to GlobalLogger.
+        :param message: str - Log message.
+        :param level: str - Log level.
+        :param metadata: dict - Additional log metadata.
         """
         GlobalLogger.log_event(message=message, level=level, name="react_agent", metadata=metadata)
