@@ -26,49 +26,86 @@ class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
             # Reasoning phase
             reasoning = self.reason(query)
             self.memory.append({"role": "assistant", "content": reasoning})
-            self.log_event(f"Reasoning: {reasoning}", "info")
+            self._log_event(f"Reasoning: {reasoning}", "info")
 
-            if "ACTION" in reasoning:
-                # Parse action
-                tool_name, args = self._parse_action(reasoning)
-                # Acting phase
-                try:
-                    result = self.act((tool_name, args))
+            # Parse action
+            action_details = self._parse_action(reasoning)
+            if action_details:
+                # Route action
+                status, result = self._route_action(*action_details)
+                if status == 201:  # Successful execution
                     self.memory.append({"role": "system", "content": f"Action Result: {result}"})
-                    self.log_event(f"Action Result: {result}", "info")
-                except ValueError as e:
-                    self.log_event(f"Action Error: {e}", "error")
-                    return f"Error: {e}"
+                    self._log_event(f"Action Result: {result}", "info")
+                elif status == 404:  # Action not found
+                    self._log_event(f"Action Error: {result}", "error")
+                    return result
             else:
-                # If no action, return the reasoning as the final response
+                # If no action detected, return the reasoning as the final response
                 return reasoning
 
     def _parse_action(self, reasoning: str) -> tuple:
         """
         Parse the action from reasoning into a tool name and arguments.
         """
-        if "ACTION:" not in reasoning:
-            raise ValueError("No actionable reasoning found.")
-        action_str = reasoning.split("ACTION:")[1].strip()
-        tool_name = action_str.split("(")[0]
-        args = eval(action_str.split("(")[1][:-1])  # Simplistic argument parsing
-        return tool_name, args
+        tool_match = re.match(r"ACTION:\s*tool:(\w+)\s*({.*})", reasoning)
+        capability_match = re.match(r"ACTION:\s*capability:(\w+)\s*({.*})", reasoning)
 
-    def request_tool_from_registry(self, tool_name, registry: ToolRegistry):
-        """
-        Dynamically request a tool from the registry.
-        """
-        tool = registry.get_tool(tool_name)
-        if tool:
-            self.add_tool(tool)
-            return f"Tool '{tool_name}' added successfully."
-        return f"Tool '{tool_name}' not found in the registry."
+        try:
+            if tool_match:
+                action_name, params = tool_match.groups()
+                return "tool", action_name.strip(), eval(params)
+            if capability_match:
+                action_name, params = capability_match.groups()
+                return "capability", action_name.strip(), eval(params)
+        except (SyntaxError, ValueError) as e:
+            self._log_event(f"Failed to parse action: {e}", "warning")
 
-    def use_capability(self, capability_name, query, **kwargs):
+        return None
+
+    def _route_action(self, action_type, action_name, params):
         """
-        Use a registered capability.
+        Route actions to the appropriate handler with timeout handling.
         """
-        capability = self.capability_registry.get_capability(capability_name)
-        if capability:
-            return capability.run(query, **kwargs)
-        return f"Capability '{capability_name}' not found."
+        handler = None
+
+        if action_type == "tool":
+            handler = self.tools.get(action_name)
+        elif action_type == "capability":
+            handler = self.capability_registry.get_capability(action_name)
+
+        if handler:
+            return 201, self._execute_with_timeout(handler, params)
+
+        self._log_event(f"Action not found: {action_name}", "error")
+        return 404, f"{action_type.capitalize()} '{action_name}' not found."
+
+    def _execute_with_timeout(self, handler, params, timeout=10):
+        """
+        Execute a handler with a timeout.
+        """
+        def timeout_handler(signum, frame):
+            raise TimeoutError("Action execution timed out.")
+
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(timeout)
+
+        try:
+            start_time = time.time()
+            result = handler(**params)
+            execution_time = time.time() - start_time
+            self._log_event("Action executed successfully", "info", execution_time=execution_time)
+            return result
+        except TimeoutError:
+            self._log_event("Action execution timed out", "error")
+            return "The action timed out."
+        except Exception as e:
+            self._log_event(f"Error executing action: {e}", "error")
+            return f"An error occurred: {e}"
+        finally:
+            signal.alarm(0)
+
+    def _log_event(self, message, level, **metadata):
+        """
+        Log an event to GlobalLogger.
+        """
+        GlobalLogger.log_event(message=message, level=level, name="react_agent", metadata=metadata)
