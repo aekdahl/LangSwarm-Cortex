@@ -7,7 +7,7 @@ class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
         super().__init__(name, agent, tools=tools, tool_registry=tool_registry, memory=memory, **kwargs)
         self.capability_registry = capability_registry or CapabilityRegistry()
 
-    def run_react(self, query: str) -> str:
+    def react(self, query: str) -> str:
         """
         Execute the ReAct loop: reason, act, and iterate until a final response is produced.
         """
