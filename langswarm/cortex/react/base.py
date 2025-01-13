@@ -24,5 +24,5 @@ class BaseReAct:
                     return tool.use(*args)
         raise ValueError(f"Tool '{tool_name}' not found.")
 
-    def run(self, query):
+    def react(self, query):
         raise NotImplementedError("This method should be implemented in a subclass.")
