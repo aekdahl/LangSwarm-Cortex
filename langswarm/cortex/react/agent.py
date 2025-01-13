@@ -7,6 +7,17 @@ class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
         super().__init__(name, agent, tools=tools, tool_registry=tool_registry, memory=memory, **kwargs)
         self.capability_registry = capability_registry or CapabilityRegistry()
 
+    def chat(self, query: str) -> str:
+        """
+        Handle both standard and ReAct-specific queries.
+        """
+        if query.startswith("REACT:"):
+            # Route to ReAct workflow
+            return self.react(query[len("REACT:"):].strip())
+        else:
+            # Default behavior from AgentWrapper
+            return super().chat(query)
+
     def react(self, query: str) -> str:
         """
         Execute the ReAct loop: reason, act, and iterate until a final response is produced.
@@ -27,7 +38,7 @@ class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
                     self.log_event(f"Action Result: {result}", "info")
                 except ValueError as e:
                     self.log_event(f"Action Error: {e}", "error")
-                    break
+                    return f"Error: {e}"
             else:
                 # If no action, return the reasoning as the final response
                 return reasoning
