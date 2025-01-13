@@ -11,7 +11,10 @@ class GitHubCodeCapability(BaseCapability):
     def __init__(self, github_token, db_path="code_snippets"):
         super().__init__(
             name="GitHubCodeCapability",
-            description="Fetch, digest, and query source code from GitHub repositories."
+            description=(
+                "Fetch code from public or private GitHub repositories, process it into smaller chunks, "
+                "store it in a database for efficient retrieval, and query the stored code snippets."
+            )
         )
         self.github_tool = GitHubAPIWrapper(github_access_token=github_token)
         self.text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
