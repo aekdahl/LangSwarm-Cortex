@@ -15,39 +15,34 @@ class ReActAgent(AgentWrapper, ToolMixin, BaseReAct):
         :param query: str - The input query.
         :return: Tuple[int, str] - (status_code, response).
         """
-        if query.lower().startswith(("use tool", "use capability")):
-            return self.react(query)
-        else:
-            # Default behavior from AgentWrapper
-            return 200, super().chat(query)
+        agent_reply = super().chat(query)
+        status, result = self.react(agent_reply)
+        
+        if status == 201:  # Successful action execution
+            self._log_event(f"Action Result: {result}", "info")
+            return agent_reply = super().chat(result)
+        elif status == 200:  # No action detected
+            self._log_event(f"No action detected: {result}", "info")
+            return agent_reply
+        else:  # Action not found or other error
+            self._log_event(f"Action Error: {result}", "error")
+            return agent_reply
 
-    def react(self, query: str) -> tuple:
+    def react(self, reasoning: str) -> tuple:
         """
         Execute the reasoning and acting workflow: parse the input for tools or capabilities, route the action,
         and return a structured response.
-        :param query: str - The input query.
+        :param reasoning: str - The input reasoning.
         :return: Tuple[int, str] - (status_code, response).
         """
-        # Reasoning phase
-        reasoning = self.reason(query)
-        self.memory.append({"role": "assistant", "content": reasoning})
-        self._log_event(f"Reasoning: {reasoning}", "info")
-
         # Parse action
         action_details = self._parse_action(reasoning)
         if action_details:
             # Route action
             status, result = self._route_action(*action_details)
-            if status == 201:  # Successful action execution
-                self.memory.append({"role": "system", "content": f"Action Result: {result}"})
-                self._log_event(f"Action Result: {result}", "info")
-                return status, result
-            elif status == 404:  # Action not found
-                self._log_event(f"Action Error: {result}", "error")
-                return status, result
+            return status, result
         else:
             # No action detected, return the reasoning as the final response
-            self._log_event("No actionable reasoning found. Returning final response.", "info")
             return 200, reasoning
 
     def _parse_action(self, reasoning: str) -> tuple:
