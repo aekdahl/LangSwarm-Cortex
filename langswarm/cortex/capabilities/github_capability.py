@@ -1,4 +1,5 @@
-from langchain.tools import GitHubAPIWrapper
+#from langchain.tools import GitHubAPIWrapper
+from langchain_community.utilities.github import GitHubAPIWrapper
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
