@@ -1,5 +1,4 @@
 import json
-import re
 
 from langchain_community.utilities.github import GitHubAPIWrapper
 from .base import BaseCapability
@@ -64,10 +63,10 @@ class GitHubCodeCapability(BaseCapability):
 
     - `update_file`: Update existing file content.
       - IMPORTANT! Do not truncate Old or New content.
-        - Make sure to separate the file path and the content with a linebreak (\n)
+        - Make sure to separate the path and the content with a linebreak (\n)
       - Parameters:
         - `file_query` (str): File path, old content, and new content.
-          - File path: The path to the file ending with a new line (\n).
+          - File path: The path to the file ending with a new line.
           - Old content: Wrapped in `OLD <<<<` and `>>>> OLD`.
           - New content: Wrapped in `NEW <<<<` and `>>>> NEW`.
       - For example:
@@ -231,7 +230,6 @@ Example:
     def update_file(self, file_query):
         """
         Updates a file with new content.
-        Ensures there is a newline after the file path before content changes.
         Parameters:
             file_query(str): Contains the file path and the file contents.
                 The old file contents is wrapped in OLD <<<< and >>>> OLD
@@ -247,14 +245,7 @@ Example:
         Returns:
             A success or failure message
         """
-
-        # Regex to detect cases where the file path is immediately followed by "OLD <<<<"
-        pattern = r"([a-zA-Z0-9_/.-]+)(?<!\n) (OLD <<<<)"
-
-        # Replace with file path + newline + content indicator
-        fixed_output = re.sub(pattern, r"\1\n\2", file_query)
-    
-        action = self.github_tool.update_file(fixed_output)
+        action = self.github_tool.update_file(file_query)
         print(action)
         return action
     

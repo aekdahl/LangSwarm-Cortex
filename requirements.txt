@@ -1,0 +1,10 @@
+# Supported versions of Python: 3.10, 3.11, 3.8, 3.9
+# Automatically updated by dependency_update_test.py
+
+langchain>=0.2.17
+langchain_community>=0.2.19
+langchain-openai>=0.1.25
+tiktoken>=0.7.0
+llama-index>=0.11.23
+pyyaml>=6.0.2
+openai>=0.30.0
