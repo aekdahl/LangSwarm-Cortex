@@ -1,4 +1,4 @@
-class BaseCapability:
+class BasePlugin:
     """
     Base class for agent capabilities.
     """
@@ -8,7 +8,7 @@ class BaseCapability:
         self.instruction = instruction
 
     def use(self, *args, **kwargs):
-        """Override this method to execute the capability."""
+        """Override this method to execute the plugin."""
         raise NotImplementedError("This method should be implemented in a subclass.")
 
     def run(self, *args, **kwargs):
