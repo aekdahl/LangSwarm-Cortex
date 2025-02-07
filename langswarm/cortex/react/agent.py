@@ -57,7 +57,21 @@ class ReActAgent(AgentWrapper, BaseReAct):
             
             if not self._is_valid_request_calls_in_text(agent_reply) or not self._is_valid_use_calls_in_text(agent_reply):
                 self._log_event(f"The agent formatted the request incorrect. Retries.", "info")
-                agent_reply = super().chat("The request was incorrect formatted. Please try to correct it.")
+                help_text = """**Incorrect format detected. Please correct it.**  
+
+**Request format:**  
+- `request:rags|your_query`  
+- `request:tools|your_query`  
+- `request:plugins|your_query`  
+
+**Use format:**  
+- `use rag:name|action|{}`  
+- `use tool:name|action|{}`  
+- `use plugin:name|action|{}`  
+
+Ensure your call follows the correct format.
+                """
+                agent_reply = super().chat(help_text)
 
             status, result = self._react(agent_reply)
 
