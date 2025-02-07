@@ -4,7 +4,8 @@ class ProcessToolkit(BasePlugin):
     """
     A plugin enabling an AI agent to use select processes.
     """
-    def __init__(self):
+    def __init__(self, identifier):
+        self.identifier = identifier
         
         super().__init__(
             name="ProcessToolkit",
