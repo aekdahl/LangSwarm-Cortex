@@ -40,7 +40,7 @@ class ReActAgent(AgentWrapper, BaseReAct):
             **kwargs
         )
 
-    def chat(self, query: str, max_iterations=5) -> str:
+    def chat(self, query: str, max_iterations=10) -> str:
         """
         Handle both standard and ReAct-specific queries.
 
@@ -54,12 +54,20 @@ class ReActAgent(AgentWrapper, BaseReAct):
         for iteration in range(max_iterations):
             asked_to_continue = None
             agent_reply = super().chat(query)
+            
+            if not self._is_valid_request_calls_in_text(agent_reply) or not self._is_valid_use_calls_in_text(agent_reply):
+                self._log_event(f"The agent formatted the request incorrect. Retries.", "info")
+                agent_reply = super().chat("The request was incorrect formatted. Please try to correct it.")
+
             status, result = self._react(agent_reply)
 
             # Store the intermediate response for summarization later
             history.append(f"-- Iteration {iteration + 1} --\nAgent response: {agent_reply}\nAction result: {result}")
 
             asked_to_continue = re.search(self.ask_to_continue_regex, agent_reply, re.IGNORECASE)
+            if not asked_to_continue:
+                asked_to_continue = re.search(self.check_for_continuation, agent_reply, re.IGNORECASE)
+
             if status != 201 and asked_to_continue:
                 self._log_event(f"Agent requested an internal step", "info")
                 query = "Please continue."

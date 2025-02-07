@@ -22,7 +22,7 @@ class PluginRegistry:
         self.plugins = {}
         self.embeddings = {}
 
-    def register_plugin(self, plugin_name: str, plugin):
+    def register_plugin(self, plugin):
         """
         Register a new plugin and generate its embedding.
 
@@ -31,6 +31,7 @@ class PluginRegistry:
                            It must have a `description` attribute.
         :raises ValueError: If the plugin is already registered or lacks a description.
         """
+        plugin_name = plugin.identifier
         if plugin_name in self.plugins:
             raise ValueError(f"Plugin '{plugin_name}' is already registered.")
         if not hasattr(plugin, "description"):
