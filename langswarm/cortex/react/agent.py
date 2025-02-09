@@ -60,12 +60,13 @@ class ReActAgent(AgentWrapper, BaseReAct):
                 help_text = """**Incorrect format detected. Please correct it.**  
 
 **Request format:**  
-- `request:rags|your_query`  
+- `request:rags|your_query`
 - `request:tools|your_query`  
 - `request:plugins|your_query`  
 
 **Use format:**  
 - `use rag:name|action|{}`  
+- `use retriever:name|action|{}`  
 - `use tool:name|action|{}`  
 - `use plugin:name|action|{}`  
 
