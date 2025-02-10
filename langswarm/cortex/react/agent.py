@@ -54,7 +54,7 @@ class ReActAgent(AgentWrapper, BaseReAct):
         for iteration in range(max_iterations):
             asked_to_continue = None
             agent_reply = super().chat(query)
-            
+
             if not self._is_valid_request_calls_in_text(agent_reply) or not self._is_valid_use_calls_in_text(agent_reply):
                 self._log_event(f"The agent formatted the request incorrect. Retries.", "info")
                 help_text = """**Incorrect format detected. Please correct it.**  

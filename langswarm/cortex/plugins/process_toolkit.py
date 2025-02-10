@@ -6,6 +6,10 @@ class ProcessToolkit(BasePlugin):
     """
     def __init__(self, identifier):
         self.identifier = identifier
+        self.brief = (
+            f"Use any of a set of structured reasoning methods—such as Chain-of-Thought, "
+            f"ReAct, Plan-and-Reflect, and multi-step approaches—when tackling different tasks."
+        )
         
         super().__init__(
             name="ProcessToolkit",

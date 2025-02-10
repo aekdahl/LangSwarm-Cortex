@@ -16,8 +16,6 @@ class PluginRegistry:
         :param embedding_model: A callable that generates embeddings for a given text.
                                 Defaults to SentenceTransformer's 'all-MiniLM-L6-v2'.
         """
-        # Use the provided embedding model or load the default one
-        self.included_plugins = set()  # Tracks plugins already introduced
         self.embedding_model = embedding_model or SentenceTransformer('all-MiniLM-L6-v2').encode
         self.plugins = {}
         self.embeddings = {}
@@ -61,9 +59,9 @@ class PluginRegistry:
         """
         List all registered plugins.
 
-        :return: A list of plugin names.
+        :return: A list of plugin names and briefs.
         """
-        return list(self.plugins.keys())
+        return [f"{k} - {v['brief']}" for k, v in self.plugins.items()]
 
     def remove_plugin(self, plugin_name: str):
         """
@@ -85,6 +83,12 @@ class PluginRegistry:
         :param top_k: Number of top results to return.
         :return: A list of matching plugins, sorted by similarity score.
         """
+        # Check if query is a single word and exists in rags
+        if query.isalnum() and query in self.plugins:
+            plugin = self.plugins.get(query)
+            if plugin:
+                return [{"name": query, "description": plugin.description, "instruction": plugin.instruction}]
+
         query_embedding = self.embedding_model(query)
         plugin_names = list(self.embeddings.keys())
         plugin_embeddings = np.array([self.embeddings[name] for name in plugin_names])
@@ -93,9 +97,6 @@ class PluginRegistry:
         similarities = cosine_similarity([query_embedding], plugin_embeddings)[0]
         ranked_indices = np.argsort(similarities)[::-1][:top_k]
 
-        # Mark these plugins as included
-        self.included_plugins.update([plugin_names[i] for i in ranked_indices])
-        
         return [
             {
                 "name": plugin_names[i],
@@ -105,10 +106,3 @@ class PluginRegistry:
             }
             for i in ranked_indices
         ]
-
-    def reset_context(self):
-        """
-        Reset the included plugins, clearing the context.
-        """
-        self.included_plugins.clear()
-        print("Context reset: All included plugins cleared.")
