@@ -16,10 +16,12 @@ class ReActAgent(AgentWrapper, BaseReAct):
         self, 
         name, 
         agent, 
+        model, 
+        memory=None, 
+        agent_type=None,
         tool_registry=None, 
         plugin_registry=None, 
         plugin_instruction=None, 
-        memory=None, 
         **kwargs
     ):
         # Validate that the provided agent is not already wrapped
@@ -33,7 +35,9 @@ class ReActAgent(AgentWrapper, BaseReAct):
         super().__init__(
             name, 
             agent,
+            model, 
             memory=memory, 
+            agent_type=agent_type,
             tool_registry=tool_registry, 
             plugin_registry=plugin_registry, 
             plugin_instruction=plugin_instruction,
@@ -48,31 +52,23 @@ class ReActAgent(AgentWrapper, BaseReAct):
         :param max_iterations: int - Maximum iterations before returning a summary.
         :return: str - The final response.
         """
-        
+
         history = []  # Store responses for final summarization
-        
+
         for iteration in range(max_iterations):
             asked_to_continue = None
             agent_reply = super().chat(query)
 
-            if not self._is_valid_request_calls_in_text(agent_reply) or not self._is_valid_use_calls_in_text(agent_reply):
-                self._log_event(f"The agent formatted the request incorrect. Retries.", "info")
-                help_text = """**Incorrect format detected. Please correct it.**  
-
-**Request format:**  
-- `request:rags|your_query`
-- `request:tools|your_query`  
-- `request:plugins|your_query`  
-
-**Use format:**  
-- `use rag:name|action|{}`  
-- `use retriever:name|action|{}`  
-- `use tool:name|action|{}`  
-- `use plugin:name|action|{}`  
-
-Ensure your call follows the correct format.
-                """
-                agent_reply = super().chat(help_text)
+            # ToDo: Update to current call format
+            #request_call_error = self.utils._is_valid_request_calls_in_text(agent_reply)
+            #if request_call_error:
+            #    self._log_event(f"The agent formatted the request call incorrect.", "info")
+            #    agent_reply = super().chat(request_call_error)
+            #else:
+            #    use_call_error = self.utils._is_valid_use_calls_in_text(agent_reply)
+            #    if use_call_error:
+            #        self._log_event(f"The agent formatted the use call incorrect.", "info")
+            #        agent_reply = super().chat(use_call_error)
 
             status, result = self._react(agent_reply)
 
@@ -80,8 +76,10 @@ Ensure your call follows the correct format.
             history.append(f"-- Iteration {iteration + 1} --\nAgent response: {agent_reply}\nAction result: {result}")
 
             asked_to_continue = re.search(self.ask_to_continue_regex, agent_reply, re.IGNORECASE)
-            if not asked_to_continue:
-                asked_to_continue = re.search(self.check_for_continuation, agent_reply, re.IGNORECASE)
+            
+            # ToDo: The regex is not working properly
+            #if not asked_to_continue:
+            #    asked_to_continue = re.search(self.check_for_continuation, agent_reply, re.IGNORECASE)
 
             if status != 201 and asked_to_continue:
                 self._log_event(f"Agent requested an internal step", "info")
@@ -143,9 +141,11 @@ Ensure your call follows the correct format.
                 final_status = 200
 
             # Concatenate responses into one string
-            final_response = "\n\n".join(responses)
+            final_response = "\n\n".join(map(str, responses))
 
             return final_status, final_response
+        else:
+            self._log_event(f"No actions returned.", "info")
 
         return 200, reasoning
             

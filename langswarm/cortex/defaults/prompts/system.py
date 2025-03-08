@@ -1,11 +1,33 @@
-PluginInstructions = """--- PLUGIN INSTRUCTIONS ---
-(Plugins are extended external capabilities that can provide specialized reasoning, advanced frameworks and methods.)
+PluginInstructions = """-- Plugins (Advanced Capabilities) --
+Plugins provide advanced frameworks, domain logic, or special reasoning.
 
-Request available Plugins and instructions on how to use them:
-   request:plugins|QUERY_TEXT
-   (Replace QUERY_TEXT with a specific plugin name, or a search query.)
+Request information about a specific plugin, or search for available plugins:
+START>>>
+{
+  "calls": [
+    {
+      "type": "plugins", # Both plugin and plugins works
+      "method": "request",
+      "instance_name": "<exact_plugin_name> or <search query>", # E.g “my_plugin_name“ or “Find a plugin for structured reasoning“
+      "action": "",
+      "parameters": {}
+    }
+  ]
+}
+<<<END
 
-Example to get appropriate plugins:
-User Query: “Build a reminder app.”
-Your Response: “request:plugins|processing_toolkit” or “request:plugins|Process to build a reminder app.”
+Once the correct plugin is identified, execute it using:
+START>>>
+{
+  "calls": [
+    {
+      "type": "plugin",
+      "method": "execute",
+      "instance_name": "<plugin_name>",
+      "action": "<action_name>",
+      "parameters": {params_dictionary}
+    }
+  ]
+}
+<<<END
 """

@@ -61,7 +61,7 @@ class PluginRegistry:
 
         :return: A list of plugin names and briefs.
         """
-        return [f"{k} - {v['brief']}" for k, v in self.plugins.items()]
+        return [f"{k} - {v.brief}" for k, v in self.plugins.items()]
 
     def remove_plugin(self, plugin_name: str):
         """
